@@ -8,6 +8,10 @@ node_modules/
 /build/
 /dist/
 
+# TypeScript build info
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
@@ -21,6 +25,7 @@ lerna-debug.log*
 .env*.local
 .env.development
 .env.production
+.env.local
 
 # IDE & Editor files
 .vscode/*
@@ -50,6 +55,7 @@ __v0_jsx-dev-runtime.ts
 .snowflake/
 .v0-trash/
 .vercel/
+.supabase/
 
 # Testing & Coverage
 /coverage/

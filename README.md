@@ -7,14 +7,14 @@
 
 ## 🌟 Key Features
 
-* **📱 Apple & Google Wallet Pass Integration**  
-  Customers tap or scan a QR code at your store register to save their digital loyalty pass directly into Apple Wallet or Google Pay. Zero mobile app download required!
+* **📱 Digital Mobile Pass Integration**  
+  Customers tap or scan a QR code at your store register to access their digital loyalty pass on their mobile browser. Zero mobile app download required!
 
 * **🎯 2-Step Business Registration Onboarding**  
   Dedicated `/register-business` multi-step application flow with interactive industry selection chips (`Coffee & Cafe`, `Retail & Boutique`, `Fitness & Studio`, `Salon & Spa`, `Restaurant & Bar`) and owner security setup.
 
-* **📊 Live Interactive Hero Widget & ROI Calculator**  
-  Real-time analytics dashboard tab preview (`Analytics`, `Digital Pass Card`, `Live Activity`) and interactive revenue growth calculator to estimate monthly profit boosts.
+* **📊 Live Interactive Hero Widget**  
+  Real-time analytics dashboard tab preview (`Analytics`, `Digital Pass Card`, `Live Activity`) to demonstrate retention features.
 
 * **🛡️ Fraud-Proof Mobile Scanning & Verification**  
   Encrypted mobile stamp verification to eliminate paper stamp card abuse and boost customer retention by over **32%**.
@@ -84,7 +84,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to view the 
 
 | Route | Description |
 | :--- | :--- |
-| `/` | Landing page with interactive hero widget, features, ROI calculator, & FAQs |
+| `/` | Landing page with interactive hero widget, features, & FAQs |
 | `/register-business` | Dedicated multi-step business application onboarding form |
 | `/login` | Admin & merchant workspace sign-in portal |
 
