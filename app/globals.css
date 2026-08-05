@@ -1721,7 +1721,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   max-width: 1060px;
   margin: 32px auto 0;
   display: grid;
-  grid-template-columns: 420px 1fr;
+  grid-template-columns: 1fr 440px;
   background: oklch(1 0 0 / 0.75);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -1858,7 +1858,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 }
 
 .login-form-card-v2 {
-  padding: 44px 48px;
+  padding: 44px 36px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
