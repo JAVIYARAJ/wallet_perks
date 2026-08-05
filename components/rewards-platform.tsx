@@ -13,7 +13,41 @@ type Registration = { businessName: string; legalName: string; ownerName: string
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@loyalty.local'
 const initialRegistration: Registration = { businessName: '', legalName: '', ownerName: '', email: '', phone: '', industry: '', website: '', address: '', description: '' }
 
-function Brand() { return <div className="auth-brand"><span className="brand-mark"><Sparkles aria-hidden="true" /></span><span>WalletPerks<span className="brand-dot">.</span></span></div> }
+function Brand() {
+  return (
+    <div className="auth-brand">
+      <div className="brand-icon-wrapper">
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="brand-svg">
+          {/* Outer glow aura */}
+          <rect x="2" y="5" width="28" height="22" rx="6" fill="url(#wpGrad1)" />
+          {/* Card header strip */}
+          <path d="M2 11C2 7.68629 4.68629 5 8 5H24C27.3137 5 30 7.68629 30 11V12H2V11Z" fill="white" fillOpacity="0.18" />
+          {/* Card magnetic chip / balance indicator */}
+          <rect x="6" y="16" width="7" height="5" rx="1.5" fill="#FCD34D" fillOpacity="0.9" />
+          {/* Perk Star Badge */}
+          <circle cx="22" cy="18.5" r="4.5" fill="url(#wpBadgeGrad)" />
+          <path d="M22 15.2L22.8 17.4L25 18.5L22.8 19.6L22 21.8L21.2 19.6L19 18.5L21.2 17.4L22 15.2Z" fill="white" />
+          <defs>
+            <linearGradient id="wpGrad1" x1="2" y1="5" x2="30" y2="27" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#4F46E5" />
+              <stop offset="0.5" stopColor="#7C3AED" />
+              <stop offset="1" stopColor="#9333EA" />
+            </linearGradient>
+            <linearGradient id="wpBadgeGrad" x1="17.5" y1="14" x2="26.5" y2="23" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#F59E0B" />
+              <stop offset="1" stopColor="#D97706" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <span className="brand-text">
+        <span className="brand-name-main">Wallet</span>
+        <span className="brand-name-accent">Perks</span>
+        <span className="brand-dot">.</span>
+      </span>
+    </div>
+  )
+}
 function Field({ label, name, value, onChange, type = 'text', required = true, placeholder }: { label: string; name: string; value: string; onChange: (name: string, value: string) => void; type?: string; required?: boolean; placeholder?: string }) { return <label className="auth-field"><span>{label}{required && <b aria-hidden="true">*</b>}</span><input name={name} type={type} value={value} onChange={(event) => onChange(name, event.target.value)} placeholder={placeholder} required={required} /></label> }
 function AuthLayout({ children, onBack }: { children: React.ReactNode; onBack: () => void }) { return <main className="auth-page"><div className="auth-top"><Brand /><button className="back-link" onClick={onBack}>Back to home</button></div>{children}<footer>Trusted by growing businesses to build lasting customer relationships.</footer></main> }
 
@@ -90,7 +124,7 @@ function Landing({ onRegister, onLogin }: { onRegister: () => void; onLogin: () 
       </header>
 
       {/* Hero Section */}
-      <section className="hero-v2">
+      <section id="demo" className="hero-v2">
         <div className="hero-copy-v2">
           <div className="hero-badge">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -829,7 +863,146 @@ function Register({ onBack, onSubmit }: { onBack: () => void; onSubmit: (registr
 }
 
 
-function Login({ onBack, onLogin }: { onBack: () => void; onLogin: (email: string) => void }) { const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [showPassword, setShowPassword] = useState(false); const [error, setError] = useState(''); return <AuthLayout onBack={onBack}><section className="auth-card login-card"><div className="auth-icon"><LockKeyholeIcon /></div><div className="eyebrow">Welcome back</div><h1>Sign in to loyalty<span className="brand-dot">.</span></h1><p>Access your business loyalty workspace.</p><form onSubmit={(event) => { event.preventDefault(); if (!email || !password) return setError('Enter your email and password to continue.'); setError(''); onLogin(email) }}><label className="auth-field"><span>Email address<b aria-hidden="true">*</b></span><input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="you@yourbusiness.com" required /></label><label className="auth-field"><span>Password<b aria-hidden="true">*</b></span><span className="password-wrap"><input value={password} onChange={(event) => setPassword(event.target.value)} type={showPassword ? 'text' : 'password'} required /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff /> : <Eye />}</button></span></label>{error && <div className="form-error" role="alert">{error}</div>}<Button className="full-button" type="submit">Sign in <ArrowRight data-icon="inline-end" /></Button></form><div className="demo-hint"><CircleHelp /> <span>Prototype admin access: <strong>{ADMIN_EMAIL}</strong></span></div><p className="auth-switch">New to loyalty? <button onClick={onBack}>Register your business</button></p></section></AuthLayout> }
+function Login({ onBack, onLogin }: { onBack: () => void; onLogin: (email: string) => void }) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
+  const [error, setError] = useState('')
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    if (!email || !password) {
+      return setError('Please enter your business email and password.')
+    }
+    setError('')
+    onLogin(email)
+  }
+
+  function handleDemoFill(demoEmail: string) {
+    setEmail(demoEmail)
+    setPassword('password123')
+    setError('')
+  }
+
+  return (
+    <AuthLayout onBack={onBack}>
+      <div className="login-v2-container">
+        {/* Left Side: Hero Rail */}
+        <div className="login-sidebar-v2">
+          <div className="sidebar-badge">
+            <ShieldCheck className="w-3.5 h-3.5" /> Secure Workspace Sign In
+          </div>
+          <h2>Welcome back to your business workspace.</h2>
+          <p>Sign in to manage your rewards, issue digital passes, track customer retention, and send push campaigns.</p>
+
+          <div className="login-stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon"><TrendingUp className="w-4 h-4 text-emerald-400" /></div>
+              <div>
+                <strong>32% Retention Boost</strong>
+                <small>Average merchant customer return rate</small>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon"><Smartphone className="w-4 h-4 text-purple-400" /></div>
+              <div>
+                <strong>Mobile Wallet Ready</strong>
+                <small>Apple & Google Wallet passes active</small>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon"><Zap className="w-4 h-4 text-amber-400" /></div>
+              <div>
+                <strong>Instant Redemption</strong>
+                <small>Sub-second QR scanning at register</small>
+              </div>
+            </div>
+          </div>
+
+          <div className="login-demo-box">
+            <div className="demo-box-head">
+              <CircleHelp className="w-4 h-4 text-purple-300" />
+              <strong>Quick Prototype Access</strong>
+            </div>
+            <p>Click below to prefill demo login credentials:</p>
+            <div className="demo-btns-row">
+              <button type="button" onClick={() => handleDemoFill(ADMIN_EMAIL)}>
+                Super Admin ({ADMIN_EMAIL})
+              </button>
+              <button type="button" onClick={() => handleDemoFill('owner@northstarcoffee.com')}>
+                Merchant Demo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side: Form Card */}
+        <div className="login-form-card-v2">
+          <div className="form-head">
+            <h1>Sign in to WalletPerks</h1>
+            <p>Enter your account credentials to access your workspace dashboard.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="login-form-body">
+            <div className="field-group">
+              <label>Work Email Address <b>*</b></label>
+              <input 
+                type="email"
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                placeholder="you@yourbusiness.com" 
+                required 
+              />
+            </div>
+
+            <div className="field-group">
+              <div className="field-label-row">
+                <label>Password <b>*</b></label>
+                <a href="#" className="forgot-password-link" onClick={(e) => { e.preventDefault(); alert('Demo reset link sent to ' + (email || 'your email')); }}>
+                  Forgot password?
+                </a>
+              </div>
+              <div className="password-input-wrap">
+                <input 
+                  type={showPassword ? 'text' : 'password'} 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  placeholder="Enter your password" 
+                  required 
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)}>
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <label className="terms-checkbox-label">
+              <input 
+                type="checkbox" 
+                checked={rememberMe} 
+                onChange={(e) => setRememberMe(e.target.checked)} 
+              />
+              <span>Remember this device for 30 days</span>
+            </label>
+
+            {error && <div className="form-error-v2">{error}</div>}
+
+            <Button type="submit" className="btn-continue highlight w-full justify-center">
+              Sign in to Workspace <ArrowRight className="w-4 h-4 ml-1.5" />
+            </Button>
+          </form>
+
+          <div className="login-switch-footer">
+            <span>New to WalletPerks?</span>
+            <button type="button" onClick={onBack}>Register your business for free</button>
+          </div>
+        </div>
+      </div>
+    </AuthLayout>
+  )
+}
+
 function LockKeyholeIcon() { return <ShieldCheck aria-hidden="true" /> }
 
 function Pending({ registration, onSignOut }: { registration: Registration; onSignOut: () => void }) { return <main className="status-page"><div className="status-brand"><Brand /><button className="signout-link" onClick={onSignOut}><LogOut /> Sign out</button></div><section className="status-card"><div className="status-icon pending"><Clock3 /></div><div className="eyebrow">Application received</div><h1>We&apos;re reviewing your business</h1><p>Thanks for applying, {registration.ownerName || 'there'}. Our team reviews every business personally, then unlocks the workspace when everything looks right.</p><div className="review-timeline"><div className="done"><span><Check /></span><strong>Application submitted</strong><small>Your information is safely with our team.</small></div><div className="current"><span><Clock3 /></span><strong>Team review</strong><small>Usually completed within one business day.</small></div><div><span>3</span><strong>Workspace access</strong><small>We&apos;ll let you know when it&apos;s ready.</small></div></div><div className="status-summary"><div><small>Business</small><strong>{registration.businessName || 'Your business'}</strong></div><div><small>Application status</small><strong><span className="status-dot" /> Pending review</strong></div><div><small>Submitted contact</small><strong>{registration.email || 'your email'}</strong></div></div></section></main> }
