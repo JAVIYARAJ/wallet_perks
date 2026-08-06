@@ -16,6 +16,8 @@ export type RegisterBusinessPayload = {
   lat?: number | null
   lon?: number | null
   description: string
+  gstin?: string
+  pan?: string
 }
 
 /**
@@ -41,6 +43,8 @@ export class BusinessController {
       lat,
       lon,
       description,
+      gstin,
+      pan,
     } = payload
 
     // 1. Validation
@@ -116,6 +120,8 @@ export class BusinessController {
           latitude: finalLat,
           longitude: finalLon,
           description: description || null,
+          gstin: gstin ? gstin.trim().toUpperCase() : null,
+          pan: pan ? pan.trim().toUpperCase() : null,
           status: 'pending',
         })
         .select('id, status')
@@ -131,7 +137,27 @@ export class BusinessController {
 
       const businessId = businessData?.id
 
-      // 4. Update profile with business_id if ownerId is available
+      // 4. Create primary main branch in public.business_branches table
+      if (businessId) {
+        try {
+          await supabase.from('business_branches').insert({
+            business_id: businessId,
+            branch_name: `${businessName} (Main HQ)`,
+            branch_code: 'HQ-01',
+            address: address,
+            phone: phone || null,
+            email: email,
+            latitude: finalLat,
+            longitude: finalLon,
+            is_main_branch: true,
+            is_active: true,
+          })
+        } catch (branchErr) {
+          console.error('Failed to create main branch record:', branchErr)
+        }
+      }
+
+      // 5. Update profile with business_id if ownerId is available
       if (ownerId && businessId) {
         await supabase
           .from('profiles')
@@ -141,6 +167,30 @@ export class BusinessController {
             phone: phone || null,
           })
           .eq('id', ownerId)
+      }
+
+      // 5. Send Merchant Application Under Review email via Brevo
+      try {
+        const { sendEmailWithBrevo, buildMerchantRegistrationEmailHtml } = await import('@/lib/brevo-email')
+        const emailHtml = buildMerchantRegistrationEmailHtml({
+          ownerName,
+          businessName,
+          legalName,
+          industry,
+          address,
+          email,
+          phone,
+          gstin,
+          pan,
+        })
+        await sendEmailWithBrevo({
+          toEmail: email,
+          toName: ownerName,
+          subject: `[WalletPerks] Application Received - ${businessName} is Under Review`,
+          htmlContent: emailHtml,
+        })
+      } catch (emailErr) {
+        console.error('Failed to dispatch Brevo merchant registration email:', emailErr)
       }
 
       return NextResponse.json({
@@ -293,6 +343,8 @@ export class BusinessController {
           longitude: biz.longitude,
           status: biz.status,
           rejectionReason: biz.rejection_reason,
+          gstin: biz.gstin,
+          pan: biz.pan,
           createdAt: biz.created_at,
         },
       })
@@ -302,6 +354,139 @@ export class BusinessController {
         { error: 'Internal server error checking business status.' },
         { status: 500 }
       )
+    }
+  }
+
+  /**
+   * Update operational business profile information for approved merchants
+   */
+  static async updateBusinessProfile(payload: {
+    email: string
+    businessName?: string
+    ownerName?: string
+    phone?: string
+    industry?: string
+    website?: string
+    address?: string
+    description?: string
+    latitude?: number
+    longitude?: number
+  }): Promise<NextResponse> {
+    const { email, businessName, ownerName, phone, industry, website, address, description, latitude, longitude } = payload
+
+    if (!email) {
+      return NextResponse.json({ error: 'Merchant email is required.' }, { status: 400 })
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    const supabaseKey = serviceRoleKey || supabaseAnonKey
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json({ success: true, message: 'Updated profile in prototype mode.' })
+    }
+
+    const supabase = createSupabaseClient(supabaseUrl, supabaseKey)
+
+    const updateFields: Record<string, any> = {}
+    if (businessName !== undefined) updateFields.business_name = businessName
+    if (ownerName !== undefined) updateFields.owner_name = ownerName
+    if (phone !== undefined) updateFields.phone = phone
+    if (industry !== undefined) updateFields.industry = industry
+    if (website !== undefined) updateFields.website = website
+    if (address !== undefined) updateFields.address = address
+    if (description !== undefined) updateFields.description = description
+    if (latitude !== undefined) updateFields.latitude = latitude
+    if (longitude !== undefined) updateFields.longitude = longitude
+
+    const { data, error } = await supabase
+      .from('businesses')
+      .update(updateFields)
+      .eq('email', email)
+      .select('*')
+      .single()
+
+    if (error) {
+      console.error('Failed to update business profile:', error.message)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Business profile updated successfully.',
+      business: data,
+    })
+  }
+
+  /**
+   * GET /api/businesses/approved
+   * Fetch all approved registered businesses with optional industry filter
+   */
+  static async getApprovedBusinesses(request?: Request): Promise<NextResponse> {
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      const supabaseKey = serviceRoleKey || supabaseAnonKey
+
+      if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('your-project-id')) {
+        return NextResponse.json({
+          success: true,
+          count: 0,
+          businesses: [],
+        })
+      }
+
+      const supabase = createSupabaseClient(supabaseUrl, supabaseKey)
+
+      let query = supabase
+        .from('businesses')
+        .select('id, business_name, legal_name, owner_name, email, phone, industry, website, address, description, latitude, longitude, created_at, status')
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+
+      if (request) {
+        const { searchParams } = new URL(request.url)
+        const industry = searchParams.get('industry')
+        if (industry && industry !== 'all') {
+          query = query.ilike('industry', `%${industry}%`)
+        }
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error('Failed to fetch approved businesses:', error.message)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      // Format DB column names to camelCase response
+      const formatted = (data || []).map((biz) => ({
+        id: biz.id,
+        businessName: biz.business_name,
+        legalName: biz.legal_name,
+        ownerName: biz.owner_name,
+        email: biz.email,
+        phone: biz.phone,
+        industry: biz.industry,
+        website: biz.website,
+        address: biz.address,
+        description: biz.description,
+        latitude: biz.latitude,
+        longitude: biz.longitude,
+        createdAt: biz.created_at,
+        status: biz.status,
+      }))
+
+      return NextResponse.json({
+        success: true,
+        count: formatted.length,
+        businesses: formatted,
+      })
+    } catch (error: any) {
+      console.error('Error fetching approved businesses:', error)
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
   }
 }

@@ -119,6 +119,37 @@ export class AdminController {
       const supabase = this.getSupabaseClient()
 
       if (!supabase) {
+        // Trigger simulated/live Brevo email even in prototype mode
+        try {
+          const { sendEmailWithBrevo, buildMerchantApprovalEmailHtml, buildMerchantRejectionEmailHtml } = await import('@/lib/brevo-email')
+          if (status === 'approved') {
+            const html = buildMerchantApprovalEmailHtml({
+              ownerName: 'Merchant Owner',
+              businessName: 'Your Business',
+            })
+            await sendEmailWithBrevo({
+              toEmail: 'merchant@northstar.co',
+              toName: 'Merchant Owner',
+              subject: `[WalletPerks] Congratulations! Your business has been Approved 🎉`,
+              htmlContent: html,
+            })
+          } else if (status === 'rejected') {
+            const html = buildMerchantRejectionEmailHtml({
+              ownerName: 'Merchant Owner',
+              businessName: 'Your Business',
+              rejectionReason: rejection_reason || 'Application does not meet platform criteria.',
+            })
+            await sendEmailWithBrevo({
+              toEmail: 'merchant@northstar.co',
+              toName: 'Merchant Owner',
+              subject: `[WalletPerks] Application Status Update - Business Application`,
+              htmlContent: html,
+            })
+          }
+        } catch (e) {
+          console.error('Brevo status email error in prototype mode:', e)
+        }
+
         return NextResponse.json({
           success: true,
           message: `Business status updated to ${status} (Prototype mode).`,
@@ -155,6 +186,40 @@ export class AdminController {
           .from('profiles')
           .update({ role: 'merchant', business_id: id })
           .eq('id', updatedBiz.owner_id)
+      }
+
+      // 3. Send email notification via Brevo to business owner on status change
+      if (updatedBiz && updatedBiz.email) {
+        try {
+          const { sendEmailWithBrevo, buildMerchantApprovalEmailHtml, buildMerchantRejectionEmailHtml } = await import('@/lib/brevo-email')
+          
+          if (status === 'approved') {
+            const html = buildMerchantApprovalEmailHtml({
+              ownerName: updatedBiz.owner_name || 'Merchant Owner',
+              businessName: updatedBiz.business_name || 'Business',
+            })
+            await sendEmailWithBrevo({
+              toEmail: updatedBiz.email,
+              toName: updatedBiz.owner_name || 'Merchant Owner',
+              subject: `[WalletPerks] Congratulations! ${updatedBiz.business_name || 'Your business'} has been Approved 🎉`,
+              htmlContent: html,
+            })
+          } else if (status === 'rejected') {
+            const html = buildMerchantRejectionEmailHtml({
+              ownerName: updatedBiz.owner_name || 'Merchant Owner',
+              businessName: updatedBiz.business_name || 'Business',
+              rejectionReason: updatedBiz.rejection_reason || rejection_reason,
+            })
+            await sendEmailWithBrevo({
+              toEmail: updatedBiz.email,
+              toName: updatedBiz.owner_name || 'Merchant Owner',
+              subject: `[WalletPerks] Application Status Update - ${updatedBiz.business_name || 'Business Application'}`,
+              htmlContent: html,
+            })
+          }
+        } catch (emailErr) {
+          console.error('Failed to dispatch status update email via Brevo:', emailErr)
+        }
       }
 
       return NextResponse.json({

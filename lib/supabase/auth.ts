@@ -35,6 +35,22 @@ export async function signUpUser({
     throw error
   }
 
+  // Trigger customer welcome email via Brevo if role is customer
+  if (role === 'customer' && email) {
+    try {
+      const { sendEmailWithBrevo, buildCustomerRegistrationEmailHtml } = await import('@/lib/brevo-email')
+      const html = buildCustomerRegistrationEmailHtml({ fullName, email })
+      await sendEmailWithBrevo({
+        toEmail: email,
+        toName: fullName || 'Valued Customer',
+        subject: 'Welcome to WalletPerks! 🎉 Your VIP Rewards Wallet is Ready',
+        htmlContent: html,
+      })
+    } catch (emailErr) {
+      console.error('Failed to send Brevo customer welcome email:', emailErr)
+    }
+  }
+
   return data
 }
 

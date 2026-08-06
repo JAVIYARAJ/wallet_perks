@@ -19,3 +19,16 @@ export async function GET(request: NextRequest) {
 
   return BusinessController.getBusinessStatus(email)
 }
+
+/**
+ * PATCH /api/business/status
+ * Update operational merchant business profile details (Store Name, Phone, Address, Category, Website, Description)
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    return BusinessController.updateBusinessProfile(body)
+  } catch (err: any) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+}

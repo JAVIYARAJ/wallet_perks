@@ -143,3 +143,54 @@ DROP POLICY IF EXISTS "Allow public read of active industries" ON public.industr
 CREATE POLICY "Allow public read of active industries" 
   ON public.industries FOR SELECT 
   USING (is_active = true);
+
+-- =============================================================================
+-- 4. BUSINESS BRANCHES TABLE (Multi-Branch Outlets)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS public.business_branches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+  branch_name TEXT NOT NULL,
+  branch_code TEXT,
+  phone TEXT,
+  email TEXT,
+  address TEXT NOT NULL,
+  city TEXT,
+  state TEXT,
+  pincode TEXT,
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
+  manager_name TEXT,
+  manager_phone TEXT,
+  is_main_branch BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  operating_hours JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Performance Indexes for Business Branches
+CREATE INDEX IF NOT EXISTS idx_business_branches_business_id ON public.business_branches(business_id);
+CREATE INDEX IF NOT EXISTS idx_business_branches_active ON public.business_branches(is_active);
+
+-- Enable RLS for Business Branches
+ALTER TABLE public.business_branches ENABLE ROW LEVEL SECURITY;
+
+-- Business Branches Policies
+DROP POLICY IF EXISTS "Allow public read active branches" ON public.business_branches;
+CREATE POLICY "Allow public read active branches" 
+  ON public.business_branches FOR SELECT 
+  USING (
+    is_active = true 
+    AND business_id IN (SELECT id FROM public.businesses WHERE status = 'approved')
+  );
+
+DROP POLICY IF EXISTS "Allow merchants & admins to manage business branches" ON public.business_branches;
+CREATE POLICY "Allow merchants & admins to manage business branches" 
+  ON public.business_branches FOR ALL 
+  USING (
+    business_id IN (
+      SELECT id FROM public.businesses WHERE owner_id = auth.uid()
+    ) 
+    OR auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'admin')
+  );
